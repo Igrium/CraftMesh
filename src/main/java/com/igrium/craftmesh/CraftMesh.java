@@ -3,6 +3,8 @@ package com.igrium.craftmesh;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.texture.NativeImage;
+import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockRenderView;
 
@@ -13,6 +15,7 @@ import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.igrium.craftmesh.mat.TextureExtractor;
 import com.igrium.craftmesh.mesh.SimpleChunkBuilder;
 import com.igrium.craftmesh.test.CraftMeshCommand;
 
@@ -44,6 +47,9 @@ public class CraftMesh implements ClientModInitializer {
         try(BufferedWriter writer = Files.newBufferedWriter(target)) {
             ObjWriter.write(mesh, writer);
         }
+
+        NativeImage blockAtlasTexture = TextureExtractor.getAtlas(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE);
+        blockAtlasTexture.writeTo(exportDir.resolve("world.png"));
 
         return target.toString();
     }
