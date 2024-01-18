@@ -1,13 +1,14 @@
 package com.igrium.craftmesh.test;
 
 import com.igrium.craftmesh.CraftMesh;
-import com.igrium.craftmesh.mesh.SimpleChunkBuilder;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.logging.LogUtils;
 
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.client.world.ClientWorld;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
@@ -20,29 +21,36 @@ public class CraftMeshCommand {
             CommandRegistryAccess registryAccess) {
     
         dispatcher.register(literal("craftmesh").then(
-            literal("test").then(
-                argument("radius", IntegerArgumentType.integer(0)).executes(CraftMeshCommand::doTest)
+            literal("export").then(
+                argument("radius", IntegerArgumentType.integer(0)).then(
+                    argument("name", StringArgumentType.string()).executes(CraftMeshCommand::export)
+                )
             )
         ));
     }
 
-    private static int doTest(CommandContext<FabricClientCommandSource> context) {
+    private static int export(CommandContext<FabricClientCommandSource> context) throws CommandSyntaxException {
         int radius = IntegerArgumentType.getInteger(context, "radius");
-        BlockPos center = context.getSource().getEntity().getBlockPos();
-        ClientWorld world = context.getSource().getWorld();
-        
-        BlockPos minPos = center.add(-radius, 0, -radius).withY(world.getBottomY());
-        BlockPos maxPos = center.add(radius, 0, radius).withY(world.getTopY());
+        String name = StringArgumentType.getString(context, "name");
 
-        try {
-            SimpleChunkBuilder.testExport(minPos, maxPos, world);
-        } catch (Exception e) {
-            context.getSource().sendError(Text.literal("Error exporting world. See console for details."));
-            CraftMesh.LOGGER.error("Error exporting world.", e);
+        if (!name.endsWith(".obj")) {
+            name = name + ".obj";
         }
 
-        context.getSource().sendFeedback(Text.literal("Exported world."));
+        BlockPos center = context.getSource().getEntity().getBlockPos();
+        BlockPos minPos = center.add(-radius, -radius, -radius);
+        BlockPos maxPos = center.add(radius, radius, radius);
 
+        String file;
+        try {
+            file = CraftMesh.export(context.getSource().getWorld(), minPos, maxPos, name);
+        } catch (Exception e) {
+            context.getSource().sendError(Text.literal("Error exporting mesh. See console for details."));
+            LogUtils.getLogger().error("Error exporting mesh.", e);
+            return 0;
+        }
+
+        context.getSource().sendFeedback(Text.literal("Exported to " + file));
         return 1;
     }
 }
