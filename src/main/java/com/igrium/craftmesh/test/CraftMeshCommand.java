@@ -33,10 +33,6 @@ public class CraftMeshCommand {
         int radius = IntegerArgumentType.getInteger(context, "radius");
         String name = StringArgumentType.getString(context, "name");
 
-        if (!name.endsWith(".obj")) {
-            name = name + ".obj";
-        }
-
         BlockPos center = context.getSource().getEntity().getBlockPos();
         BlockPos minPos = center.add(-radius, -radius, -radius);
         BlockPos maxPos = center.add(radius, radius, radius);

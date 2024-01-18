@@ -1,13 +1,10 @@
 package com.igrium.craftmesh.mesh;
 
-import org.joml.Matrix4d;
-import org.joml.Matrix4dc;
-import org.joml.Vector3d;
-import org.joml.Vector3dc;
 import org.joml.Vector3f;
 
 import de.javagl.obj.Obj;
 import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.Vec3d;
 
 /**
@@ -16,8 +13,9 @@ import net.minecraft.util.math.Vec3d;
 public class ObjVertexConsumer implements VertexConsumer {
     
     public final Obj baseObj;
-    private Matrix4dc transform;
-    private Vector3d posCache = new Vector3d();
+    private Vector3f posCache = new Vector3f();
+
+    public final MatrixStack matrices = new MatrixStack();
 
     float[][] vertCache = new float[4][];
     float[][] normalCache = new float[4][];
@@ -26,45 +24,16 @@ public class ObjVertexConsumer implements VertexConsumer {
     
     public ObjVertexConsumer(Obj baseObj, Vec3d offset) {
         this.baseObj = baseObj;
-        Matrix4d transform = new Matrix4d();
-        this.transform = transform.translate(offset.x, offset.y, offset.z);
-    }
-
-    public ObjVertexConsumer(Obj baseObj, Matrix4dc transform) {
-        this.baseObj = baseObj;
-        this.transform = transform;
+        matrices.translate(offset.x, offset.y, offset.z);
     }
 
     public ObjVertexConsumer(Obj baseObj) {
         this.baseObj = baseObj;
-        this.transform = new Matrix4d();
-    }
-
-    public Matrix4dc getTransform() {
-        return transform;
-    }
-
-    public void setTransform(Matrix4dc transform) {
-        this.transform = transform;
-    }
-
-    public void setTransform(Vec3d offset) {
-        setTransform(offset.getX(), offset.getY(), offset.getZ());
-    }
-
-    public void setTransform(Vector3dc offset) {
-        Matrix4d transform = new Matrix4d();
-        this.transform = transform.translate(offset);
-    }
-
-    public void setTransform(double x, double y, double z) {
-        Matrix4d transform = new Matrix4d();
-        this.transform = transform.translate(x, y, z);
     }
 
     @Override
     public ObjVertexConsumer vertex(double x, double y, double z) {
-        posCache.set(x, y, z).mulPosition(transform);
+        posCache.set(x, y, z).mulPosition(matrices.peek().getPositionMatrix());
         vertCache[head] = new float[] { (float) posCache.x(), (float) posCache.y(), (float) posCache.z() };
         return this;
     }
@@ -92,7 +61,8 @@ public class ObjVertexConsumer implements VertexConsumer {
 
     @Override
     public ObjVertexConsumer normal(float x, float y, float z) {
-        Vector3f vec = new Vector3f(x, y, z).mulDirection(transform);
+        Vector3f vec = new Vector3f(x, y, z).mulDirection(matrices.peek().getPositionMatrix());
+        vec = vec.normalize();
         normalCache[head] = new float[] { vec.x(), vec.y(), vec.z() };
         return this;
     }

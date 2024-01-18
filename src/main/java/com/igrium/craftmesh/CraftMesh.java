@@ -1,13 +1,5 @@
 package com.igrium.craftmesh;
 
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.screen.PlayerScreenHandler;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.BlockRenderView;
-
 import java.io.BufferedWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,11 +8,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.igrium.craftmesh.mat.TextureExtractor;
-import com.igrium.craftmesh.mesh.SimpleChunkBuilder;
 import com.igrium.craftmesh.test.CraftMeshCommand;
 
 import de.javagl.obj.Obj;
 import de.javagl.obj.ObjWriter;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.texture.NativeImage;
+import net.minecraft.screen.PlayerScreenHandler;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.BlockRenderView;
 
 public class CraftMesh implements ClientModInitializer {
     // This logger is used to write text to the console and the log file.
@@ -38,18 +36,25 @@ public class CraftMesh implements ClientModInitializer {
     }
 
     public static String export(BlockRenderView world, BlockPos minPos, BlockPos maxPos, String name) throws Exception {
-        Path exportDir = getExportDir(MinecraftClient.getInstance());
-        Files.createDirectories(exportDir);
-        Path target = exportDir.resolve(name);
+        // Path exportDir = getExportDir(MinecraftClient.getInstance());
+        // Files.createDirectories(exportDir);
+        // Path target = exportDir.resolve(name);
+        Path target = getExportDir(MinecraftClient.getInstance()).resolve(name);
+        Files.createDirectories(target);
 
-        Obj mesh = SimpleChunkBuilder.buildChunk(minPos, maxPos, world);
+        Path objFile = target.resolve("world.obj");
 
-        try(BufferedWriter writer = Files.newBufferedWriter(target)) {
+        Exporter exporter = new Exporter();
+        exporter.getConfig().setMinPos(minPos).setMaxPos(maxPos);
+
+        Obj mesh = exporter.exportMesh(world);
+
+        try(BufferedWriter writer = Files.newBufferedWriter(objFile)) {
             ObjWriter.write(mesh, writer);
         }
 
         NativeImage blockAtlasTexture = TextureExtractor.getAtlas(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE);
-        blockAtlasTexture.writeTo(exportDir.resolve("world.png"));
+        blockAtlasTexture.writeTo(target.resolve("world.png"));
 
         return target.toString();
     }
