@@ -15,7 +15,7 @@
 	"icon": "assets/craftmesh/icon.png",
 	"environment": "*",
 	"entrypoints": {
-		"main": [
+		"client": [
 			"com.igrium.craftmesh.CraftMesh"
 		]
 	},
