@@ -1,6 +1,8 @@
 package com.igrium.craftmesh.mesh;
 
+import com.igrium.meshlib.AbstractConcurrentMesh;
 import com.igrium.meshlib.ConcurrentMesh;
+import com.igrium.meshlib.OverlapCheckingMesh;
 
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
@@ -16,8 +18,8 @@ import net.minecraft.world.BlockRenderView;
 
 public class BlockMeshBuilder {
 
-    public static ConcurrentMesh build(BlockPos minPos, BlockPos maxPos, BlockRenderView world) {
-        MeshVertexConsumer mesh = new MeshVertexConsumer(new ConcurrentMesh());
+    public static AbstractConcurrentMesh build(BlockPos minPos, BlockPos maxPos, BlockRenderView world) {
+        MeshVertexConsumer mesh = new MeshVertexConsumer(new OverlapCheckingMesh());
         mesh.setNormalEnabled(false);
 
         Random random = Random.create();

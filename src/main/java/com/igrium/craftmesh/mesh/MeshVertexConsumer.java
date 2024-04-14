@@ -1,8 +1,11 @@
 package com.igrium.craftmesh.mesh;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.joml.Vector3f;
 
-import com.igrium.meshlib.ConcurrentMesh;
+import com.igrium.meshlib.AbstractConcurrentMesh;
 import com.igrium.meshlib.Face;
 import com.igrium.meshlib.Vertex;
 import com.igrium.meshlib.math.Vector2;
@@ -12,10 +15,10 @@ import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.util.math.MatrixStack;
 
 public final class MeshVertexConsumer implements VertexConsumer {
-    public final ConcurrentMesh mesh;
+    public final AbstractConcurrentMesh mesh;
     private Vector3f vec = new Vector3f();
 
-    public MeshVertexConsumer(ConcurrentMesh mesh) {
+    public MeshVertexConsumer(AbstractConcurrentMesh mesh) {
         this.mesh = mesh;
     }
 
@@ -29,6 +32,12 @@ public final class MeshVertexConsumer implements VertexConsumer {
 
     public void setMaterial(String material) {
         this.material = material;
+    }
+
+    private final Set<String> activeGroups = new HashSet<>();
+
+    public Set<String> getActiveGroups() {
+        return activeGroups;
     }
 
     Vector3[] vertCache = new Vector3[4];
@@ -65,7 +74,7 @@ public final class MeshVertexConsumer implements VertexConsumer {
 
     @Override
     public MeshVertexConsumer texture(float u, float v) {
-        texCache[head] = new Vector2(u, v);
+        texCache[head] = new Vector2(u, 1 - v);
         return this;
     }
 
@@ -97,7 +106,7 @@ public final class MeshVertexConsumer implements VertexConsumer {
             }
 
             Face face = Face.create(vertices, texCache, normalEnabled ? normalCache : null, material, null);
-            mesh.putFace(face);
+            mesh.addFace(face);
             head = 0;
         } else {
             head++;
