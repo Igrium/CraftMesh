@@ -12,7 +12,9 @@ import com.igrium.meshlib.math.Vector2;
 import com.igrium.meshlib.math.Vector3;
 
 import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.MatrixStack.Entry;
 
 public final class MeshVertexConsumer implements VertexConsumer {
     public final AbstractConcurrentMesh mesh;
@@ -55,6 +57,14 @@ public final class MeshVertexConsumer implements VertexConsumer {
 
     public boolean isNormalEnabled() {
         return normalEnabled;
+    }
+    
+    @Override
+    public void quad(Entry matrixEntry, BakedQuad quad, float[] brightnesses, float red, float green, float blue,
+            int[] lights, int overlay, boolean useQuadColorData) {
+        
+        VertexConsumer.super.quad(matrixEntry, quad, new float[] { 1, 1, 1, 1 }, red, green, blue, lights, overlay,
+                useQuadColorData);
     }
 
     public MeshVertexConsumer vertex(double x, double y, double z) {
