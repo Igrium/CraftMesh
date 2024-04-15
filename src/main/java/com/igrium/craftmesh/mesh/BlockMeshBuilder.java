@@ -26,16 +26,16 @@ public class BlockMeshBuilder {
         AbstractConcurrentMesh mesh = new OverlapCheckingMesh();
         Random random = Random.create();
 
-        build(minPos, maxPos, mesh, world, random);
+        build(mesh, minPos, maxPos, world, random);
         return mesh;
     }
 
-    public static void build(BlockPos minPos, BlockPos maxPos, AbstractConcurrentMesh mesh, BlockRenderView world,
+    public static void build(AbstractConcurrentMesh targetMesh, BlockPos minPos, BlockPos maxPos, BlockRenderView world,
             Random random) {
         BlockRenderManager blockRenderManager = MinecraftClient.getInstance().getBlockRenderManager();
         MatrixStack matrixStack = new MatrixStack();
 
-        MeshVertexConsumer vertexConsumer = new MeshVertexConsumer(mesh);
+        MeshVertexConsumer vertexConsumer = new MeshVertexConsumer(targetMesh);
         vertexConsumer.setNormalEnabled(false);
 
         for (BlockPos pos : BlockPos.iterate(minPos, maxPos)) {
@@ -85,8 +85,8 @@ public class BlockMeshBuilder {
                         int maxY = Math.min(maxPos.getY(), chunkPos.getMaxY());
                         int maxZ = Math.min(maxPos.getZ(), chunkPos.getMaxZ());
 
-                        build(new BlockPos(minX, minY, minZ), new BlockPos(maxX, maxY, maxZ),
-                                targetMesh, world, random);
+                        build(targetMesh, new BlockPos(minX, minY, minZ),
+                                new BlockPos(maxX, maxY, maxZ), world, random);
 
                     }, threadExecutor));
                 }

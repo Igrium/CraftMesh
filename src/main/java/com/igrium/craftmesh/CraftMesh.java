@@ -6,6 +6,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -14,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import com.igrium.craftmesh.mat.TextureExtractor;
 import com.igrium.craftmesh.mesh.BlockMeshBuilder;
 import com.igrium.craftmesh.test.CraftMeshCommand;
+import com.igrium.craftmesh.util.ExecutorServiceManager;
 import com.igrium.meshlib.OverlapCheckingMesh;
 import com.mojang.blaze3d.systems.RenderSystem;
 
@@ -42,6 +49,11 @@ public class CraftMesh implements ClientModInitializer {
         return client.runDirectory.toPath().resolve("craftmesh");
     }
 
+    private static final int AVAILABLE_THREADS = Math.max(1, Runtime.getRuntime().availableProcessors() - 2);
+
+    private static final ExecutorServiceManager<?> WORLD_COMPILE_EXECUTORS = ExecutorServiceManager
+            .createFixed(AVAILABLE_THREADS, r -> new Thread(r, "World Compile Thread"));
+
     public static CompletableFuture<?> export(BlockRenderView world, BlockPos minPos, BlockPos maxPos, String name, Consumer<Text> feedbackConsumer) {
         try {
             Path exportDir = getExportDir(MinecraftClient.getInstance());
@@ -51,20 +63,26 @@ public class CraftMesh implements ClientModInitializer {
 
             CompletableFuture<?>[] futures = new CompletableFuture[2];
 
+            var worldCompileExecutor = WORLD_COMPILE_EXECUTORS.getHandle();
+
+            boolean useWorldCompileExecutor = true;
+
             feedbackConsumer.accept(Text.literal("Compiling world..."));
             OverlapCheckingMesh mesh = new OverlapCheckingMesh();
-            futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, Util.getMainWorkerExecutor()).thenApply(m -> {
-                feedbackConsumer.accept(Text.literal("Tessellating mesh..."));
-                return mesh.toObj();
+            futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, useWorldCompileExecutor ? worldCompileExecutor.getExecutor() : Util.getMainWorkerExecutor())
+                    .thenApplyAsync(m -> {
+                        worldCompileExecutor.close();
+                        feedbackConsumer.accept(Text.literal("Tessellating mesh..."));
+                        return mesh.toObj();
 
-            }).thenAcceptAsync(obj -> {
-                feedbackConsumer.accept(Text.literal("Saving mesh to disk..."));
-                try(BufferedWriter writer = Files.newBufferedWriter(target.resolve("world.obj"))) {
-                    ObjWriter.write(obj, writer);
-                } catch (IOException e) {
-                    throw new CompletionException(e);
-                }
-            }, Util.getIoWorkerExecutor());
+                    }, Util.getMainWorkerExecutor()).thenAcceptAsync(obj -> {
+                        feedbackConsumer.accept(Text.literal("Saving mesh to disk..."));
+                        try (BufferedWriter writer = Files.newBufferedWriter(target.resolve("world.obj"))) {
+                            ObjWriter.write(obj, writer);
+                        } catch (IOException e) {
+                            throw new CompletionException(e);
+                        }
+                    }, Util.getIoWorkerExecutor());
 
             // Extract mesh on render thread but save it on worker thread
             futures[1] = CompletableFuture.supplyAsync(() -> {
@@ -72,7 +90,6 @@ public class CraftMesh implements ClientModInitializer {
 
             }, CraftMesh::executeOnRenderThread).thenAcceptAsync(image -> {
 
-                feedbackConsumer.accept(Text.literal("Saving texture to disk..."));
                 try {
                     image.writeTo(target.resolve("world.png"));
                 } catch (IOException e) {

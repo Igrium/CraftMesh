@@ -6,11 +6,11 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.logging.LogUtils;
 
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.text.Text;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.*;
@@ -37,8 +37,13 @@ public class CraftMeshCommand {
         BlockPos minPos = center.add(-radius, -radius, -radius);
         BlockPos maxPos = center.add(radius, radius, radius);
 
+        long startTime = Util.getMeasuringTimeMs();
+
         CraftMesh.export(context.getSource().getWorld(), minPos, maxPos, name, context.getSource()::sendFeedback)
-                .exceptionally(e -> {
+                .thenRun(() -> {
+                    long time = Util.getMeasuringTimeMs() - startTime;
+                    context.getSource().sendFeedback(Text.literal("Exported mesh in %.2f seconds.".formatted(time / 1000f)));
+                }).exceptionally(e -> {
                     context.getSource().sendError(Text.literal("Error exporting mesh. See console for details."));
 
                     CraftMesh.LOGGER.error("Error exporting mesh.", e);
