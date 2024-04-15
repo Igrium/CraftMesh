@@ -37,16 +37,15 @@ public class CraftMeshCommand {
         BlockPos minPos = center.add(-radius, -radius, -radius);
         BlockPos maxPos = center.add(radius, radius, radius);
 
-        String file;
-        try {
-            file = CraftMesh.export(context.getSource().getWorld(), minPos, maxPos, name);
-        } catch (Exception e) {
-            context.getSource().sendError(Text.literal("Error exporting mesh. See console for details."));
-            LogUtils.getLogger().error("Error exporting mesh.", e);
-            return 0;
-        }
+        CraftMesh.export(context.getSource().getWorld(), minPos, maxPos, name, context.getSource()::sendFeedback)
+                .exceptionally(e -> {
+                    context.getSource().sendError(Text.literal("Error exporting mesh. See console for details."));
 
-        context.getSource().sendFeedback(Text.literal("Exported to " + file));
+                    CraftMesh.LOGGER.error("Error exporting mesh.", e);
+
+                    return null;
+                });
+
         return 1;
     }
 }

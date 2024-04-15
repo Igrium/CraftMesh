@@ -1,22 +1,29 @@
 package com.igrium.craftmesh;
 
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.igrium.craftmesh.mat.TextureExtractor;
+import com.igrium.craftmesh.mesh.BlockMeshBuilder;
 import com.igrium.craftmesh.test.CraftMeshCommand;
+import com.igrium.meshlib.OverlapCheckingMesh;
+import com.mojang.blaze3d.systems.RenderSystem;
 
-import de.javagl.obj.Obj;
 import de.javagl.obj.ObjWriter;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.NativeImage;
 import net.minecraft.screen.PlayerScreenHandler;
+import net.minecraft.text.Text;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockRenderView;
 
@@ -35,27 +42,59 @@ public class CraftMesh implements ClientModInitializer {
         return client.runDirectory.toPath().resolve("craftmesh");
     }
 
-    public static String export(BlockRenderView world, BlockPos minPos, BlockPos maxPos, String name) throws Exception {
-        // Path exportDir = getExportDir(MinecraftClient.getInstance());
-        // Files.createDirectories(exportDir);
-        // Path target = exportDir.resolve(name);
-        Path target = getExportDir(MinecraftClient.getInstance()).resolve(name);
-        Files.createDirectories(target);
+    public static CompletableFuture<?> export(BlockRenderView world, BlockPos minPos, BlockPos maxPos, String name, Consumer<Text> feedbackConsumer) {
+        try {
+            Path exportDir = getExportDir(MinecraftClient.getInstance());
 
-        Path objFile = target.resolve("world.obj");
+            Path target = exportDir.resolve(name);
+            Files.createDirectories(target);
 
-        Exporter exporter = new Exporter();
-        exporter.getConfig().setMinPos(minPos).setMaxPos(maxPos);
+            CompletableFuture<?>[] futures = new CompletableFuture[2];
 
-        Obj mesh = exporter.exportMesh(world);
+            feedbackConsumer.accept(Text.literal("Compiling world..."));
+            OverlapCheckingMesh mesh = new OverlapCheckingMesh();
+            futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, Util.getMainWorkerExecutor()).thenApply(m -> {
+                feedbackConsumer.accept(Text.literal("Tessellating mesh..."));
+                return mesh.toObj();
 
-        try(BufferedWriter writer = Files.newBufferedWriter(objFile)) {
-            ObjWriter.write(mesh, writer);
+            }).thenAcceptAsync(obj -> {
+                feedbackConsumer.accept(Text.literal("Saving mesh to disk..."));
+                try(BufferedWriter writer = Files.newBufferedWriter(target.resolve("world.obj"))) {
+                    ObjWriter.write(obj, writer);
+                } catch (IOException e) {
+                    throw new CompletionException(e);
+                }
+            }, Util.getIoWorkerExecutor());
+
+            // Extract mesh on render thread but save it on worker thread
+            futures[1] = CompletableFuture.supplyAsync(() -> {
+                return TextureExtractor.getAtlas(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE);
+
+            }, CraftMesh::executeOnRenderThread).thenAcceptAsync(image -> {
+
+                feedbackConsumer.accept(Text.literal("Saving texture to disk..."));
+                try {
+                    image.writeTo(target.resolve("world.png"));
+                } catch (IOException e) {
+                    throw new CompletionException(e);
+                }
+
+            }, Util.getIoWorkerExecutor());
+
+            return CompletableFuture.allOf(futures).thenRun(() -> {
+                feedbackConsumer.accept(Text.literal("Wrote to " + exportDir));
+            });
+
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e);
         }
+    }
 
-        NativeImage blockAtlasTexture = TextureExtractor.getAtlas(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE);
-        blockAtlasTexture.writeTo(target.resolve("world.png"));
-
-        return target.toString();
+    private static void executeOnRenderThread(Runnable r) {
+        if (RenderSystem.isOnRenderThread()) {
+            r.run();
+        } else {
+            RenderSystem.recordRenderCall(r::run);
+        }
     }
 }
