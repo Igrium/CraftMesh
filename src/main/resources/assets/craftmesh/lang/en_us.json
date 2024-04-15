@@ -1,0 +1,7 @@
+{
+    "commands.craftmesh.error": "Error exporting mesh. See console for details.",
+    "commands.craftmesh.success": "Exported mesh in %.2f seconds.",
+    "misc.craftmesh.world": "Compiling world...",
+    "misc.craftmesh.mesh": "Tessellating mesh...",
+    "misc.craftmesh.save": "Saving mesh to disk..."
+}

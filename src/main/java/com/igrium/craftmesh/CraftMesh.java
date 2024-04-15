@@ -6,12 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -67,16 +61,16 @@ public class CraftMesh implements ClientModInitializer {
 
             boolean useWorldCompileExecutor = true;
 
-            feedbackConsumer.accept(Text.literal("Compiling world..."));
+            feedbackConsumer.accept(Text.translatable("misc.craftmesh.world"));
             OverlapCheckingMesh mesh = new OverlapCheckingMesh();
             futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, useWorldCompileExecutor ? worldCompileExecutor.getExecutor() : Util.getMainWorkerExecutor())
                     .thenApplyAsync(m -> {
                         worldCompileExecutor.close();
-                        feedbackConsumer.accept(Text.literal("Tessellating mesh..."));
+                        feedbackConsumer.accept(Text.translatable("misc.craftmesh.mesh"));
                         return mesh.toObj();
 
                     }, Util.getMainWorkerExecutor()).thenAcceptAsync(obj -> {
-                        feedbackConsumer.accept(Text.literal("Saving mesh to disk..."));
+                        feedbackConsumer.accept(Text.translatable("misc.craftmesh.save"));
                         try (BufferedWriter writer = Files.newBufferedWriter(target.resolve("world.obj"))) {
                             ObjWriter.write(obj, writer);
                         } catch (IOException e) {
@@ -98,9 +92,7 @@ public class CraftMesh implements ClientModInitializer {
 
             }, Util.getIoWorkerExecutor());
 
-            return CompletableFuture.allOf(futures).thenRun(() -> {
-                feedbackConsumer.accept(Text.literal("Wrote to " + exportDir));
-            });
+            return CompletableFuture.allOf(futures);
 
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);

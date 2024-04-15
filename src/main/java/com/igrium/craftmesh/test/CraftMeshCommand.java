@@ -42,10 +42,9 @@ public class CraftMeshCommand {
         CraftMesh.export(context.getSource().getWorld(), minPos, maxPos, name, context.getSource()::sendFeedback)
                 .thenRun(() -> {
                     long time = Util.getMeasuringTimeMs() - startTime;
-                    context.getSource().sendFeedback(Text.literal("Exported mesh in %.2f seconds.".formatted(time / 1000f)));
+                    context.getSource().sendFeedback(Text.translatable("commands.craftmesh.success", time / 1000f));
                 }).exceptionally(e -> {
-                    context.getSource().sendError(Text.literal("Error exporting mesh. See console for details."));
-
+                    context.getSource().sendError(Text.translatable("commands.craftmesh.error"));
                     CraftMesh.LOGGER.error("Error exporting mesh.", e);
 
                     return null;
