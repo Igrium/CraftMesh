@@ -60,7 +60,8 @@ public class CraftMesh implements ClientModInitializer {
             var worldCompileExecutor = WORLD_COMPILE_EXECUTORS.getHandle();
 
             feedbackConsumer.accept(Text.translatable("misc.craftmesh.world"));
-            ConcurrentMeshBuilder mesh = new ConcurrentMeshBuilder();
+            ConcurrentMeshBuilder mesh = ConcurrentMeshBuilder.create(true);
+            mesh.setPrioritizeNewFaces(false);
             futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, true, worldCompileExecutor.getExecutor())
                     .thenApplyAsync(m -> {
                         worldCompileExecutor.close();

@@ -25,7 +25,8 @@ import net.minecraft.world.BlockRenderView;
 public class BlockMeshBuilder {
 
     public static ConcurrentMeshBuilder build(BlockPos minPos, BlockPos maxPos, BlockRenderView world, boolean splitBlocks) {
-        ConcurrentMeshBuilder mesh = new ConcurrentMeshBuilder();
+        ConcurrentMeshBuilder mesh = ConcurrentMeshBuilder.create();
+        mesh.setPrioritizeNewFaces(false);
         Random random = Random.create();
         build(mesh, minPos, maxPos, world, splitBlocks, random);
         return mesh;
