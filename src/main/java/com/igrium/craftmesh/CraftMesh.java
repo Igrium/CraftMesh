@@ -61,7 +61,7 @@ public class CraftMesh implements ClientModInitializer {
 
             feedbackConsumer.accept(Text.translatable("misc.craftmesh.world"));
             ConcurrentMeshBuilder mesh = new ConcurrentMeshBuilder();
-            futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, worldCompileExecutor.getExecutor())
+            futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, true, worldCompileExecutor.getExecutor())
                     .thenApplyAsync(m -> {
                         worldCompileExecutor.close();
                         feedbackConsumer.accept(Text.translatable("misc.craftmesh.mesh"));

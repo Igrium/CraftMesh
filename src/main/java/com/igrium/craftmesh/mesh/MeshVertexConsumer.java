@@ -1,7 +1,8 @@
 package com.igrium.craftmesh.mesh;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import org.joml.Vector3f;
 
@@ -36,10 +37,20 @@ public final class MeshVertexConsumer implements VertexConsumer {
         this.material = material;
     }
 
-    private final Set<String> activeGroups = new HashSet<>();
+    private final List<String> activeGroups = new ArrayList<>();
 
-    public Set<String> getActiveGroups() {
+    public Collection<String> getActiveGroups() {
         return activeGroups;
+    }
+
+    public void setActiveGroups(Collection<? extends String> groups) {
+        activeGroups.clear();
+        activeGroups.addAll(groups);
+    }
+
+    public void setActiveGroup(String group) {
+        activeGroups.clear();
+        activeGroups.add(group);
     }
 
     Vector3[] vertCache = new Vector3[4];
@@ -114,7 +125,7 @@ public final class MeshVertexConsumer implements VertexConsumer {
             for (int i = 0; i < 4; i++) {
                 vertices[i] = new Vertex(vertCache[i], colorCache[i]);
             }
-            new FaceBuilder(vertices).build(mesh);
+            new FaceBuilder(vertices).material(material).groups(activeGroups).build(mesh);
             head = 0;
         } else {
             head++;
