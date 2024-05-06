@@ -15,7 +15,7 @@ import com.igrium.craftmesh.mat.TextureExtractor;
 import com.igrium.craftmesh.mesh.BlockMeshBuilder;
 import com.igrium.craftmesh.test.CraftMeshCommand;
 import com.igrium.craftmesh.util.ExecutorServiceManager;
-import com.igrium.meshlib.OverlapCheckingMesh;
+import com.igrium.meshlib.ConcurrentMeshBuilder;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import de.javagl.obj.ObjWriter;
@@ -59,16 +59,13 @@ public class CraftMesh implements ClientModInitializer {
 
             var worldCompileExecutor = WORLD_COMPILE_EXECUTORS.getHandle();
 
-            boolean useWorldCompileExecutor = true;
-
             feedbackConsumer.accept(Text.translatable("misc.craftmesh.world"));
-            OverlapCheckingMesh mesh = new OverlapCheckingMesh();
-            futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, useWorldCompileExecutor ? worldCompileExecutor.getExecutor() : Util.getMainWorkerExecutor())
+            ConcurrentMeshBuilder mesh = new ConcurrentMeshBuilder();
+            futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, worldCompileExecutor.getExecutor())
                     .thenApplyAsync(m -> {
                         worldCompileExecutor.close();
                         feedbackConsumer.accept(Text.translatable("misc.craftmesh.mesh"));
                         return mesh.toObj();
-
                     }, Util.getMainWorkerExecutor()).thenAcceptAsync(obj -> {
                         feedbackConsumer.accept(Text.translatable("misc.craftmesh.save"));
                         try (BufferedWriter writer = Files.newBufferedWriter(target.resolve("world.obj"))) {

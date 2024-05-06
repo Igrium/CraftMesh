@@ -5,8 +5,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import com.igrium.meshlib.AbstractConcurrentMesh;
-import com.igrium.meshlib.OverlapCheckingMesh;
+import com.igrium.meshlib.ConcurrentMeshBuilder;
 
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
@@ -22,15 +21,22 @@ import net.minecraft.world.BlockRenderView;
 
 public class BlockMeshBuilder {
 
-    public static AbstractConcurrentMesh build(BlockPos minPos, BlockPos maxPos, BlockRenderView world) {
-        AbstractConcurrentMesh mesh = new OverlapCheckingMesh();
-        Random random = Random.create();
+    // public static AbstractConcurrentMesh build(BlockPos minPos, BlockPos maxPos, BlockRenderView world) {
+    //     AbstractConcurrentMesh mesh = new OverlapCheckingMesh();
+    //     Random random = Random.create();
 
+    //     build(mesh, minPos, maxPos, world, random);
+    //     return mesh;
+    // }
+
+    public static ConcurrentMeshBuilder build(BlockPos minPos, BlockPos maxPos, BlockRenderView world) {
+        ConcurrentMeshBuilder mesh = new ConcurrentMeshBuilder();
+        Random random = Random.create();
         build(mesh, minPos, maxPos, world, random);
         return mesh;
     }
 
-    public static void build(AbstractConcurrentMesh targetMesh, BlockPos minPos, BlockPos maxPos, BlockRenderView world,
+    public static void build(ConcurrentMeshBuilder targetMesh, BlockPos minPos, BlockPos maxPos, BlockRenderView world,
             Random random) {
         BlockRenderManager blockRenderManager = MinecraftClient.getInstance().getBlockRenderManager();
         MatrixStack matrixStack = new MatrixStack();
@@ -60,7 +66,7 @@ public class BlockMeshBuilder {
         }
     }
 
-    public static <T extends AbstractConcurrentMesh> CompletableFuture<T> buildThreaded(T targetMesh, BlockPos minPos,
+    public static CompletableFuture<ConcurrentMeshBuilder> buildThreaded(ConcurrentMeshBuilder targetMesh, BlockPos minPos,
             BlockPos maxPos, BlockRenderView world, Executor threadExecutor) {
 
         ChunkSectionPos minChunk = ChunkSectionPos.from(minPos);

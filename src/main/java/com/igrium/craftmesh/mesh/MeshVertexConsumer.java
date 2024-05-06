@@ -5,8 +5,8 @@ import java.util.Set;
 
 import org.joml.Vector3f;
 
-import com.igrium.meshlib.AbstractConcurrentMesh;
-import com.igrium.meshlib.Face;
+import com.igrium.meshlib.ConcurrentMeshBuilder;
+import com.igrium.meshlib.FaceBuilder;
 import com.igrium.meshlib.Vertex;
 import com.igrium.meshlib.math.Vector2;
 import com.igrium.meshlib.math.Vector3;
@@ -17,10 +17,10 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.util.math.MatrixStack.Entry;
 
 public final class MeshVertexConsumer implements VertexConsumer {
-    public final AbstractConcurrentMesh mesh;
+    public final ConcurrentMeshBuilder mesh;
     private Vector3f vec = new Vector3f();
 
-    public MeshVertexConsumer(AbstractConcurrentMesh mesh) {
+    public MeshVertexConsumer(ConcurrentMeshBuilder mesh) {
         this.mesh = mesh;
     }
 
@@ -112,11 +112,9 @@ public final class MeshVertexConsumer implements VertexConsumer {
         if (head >= 3) {
             Vertex[] vertices = new Vertex[4];
             for (int i = 0; i < 4; i++) {
-                vertices[i] = mesh.putVert(vertCache[i], colorCache[i]);
+                vertices[i] = new Vertex(vertCache[i], colorCache[i]);
             }
-
-            Face face = Face.create(vertices, texCache, normalEnabled ? normalCache : null, material, null);
-            mesh.addFace(face);
+            new FaceBuilder(vertices).build(mesh);
             head = 0;
         } else {
             head++;
