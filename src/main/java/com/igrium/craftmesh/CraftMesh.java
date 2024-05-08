@@ -66,7 +66,7 @@ public class CraftMesh implements ClientModInitializer {
                     .thenApplyAsync(m -> {
                         worldCompileExecutor.close();
                         feedbackConsumer.accept(Text.translatable("misc.craftmesh.mesh"));
-                        return mesh.toObj();
+                        return mesh.toObj(true);
                     }, Util.getMainWorkerExecutor()).thenAcceptAsync(obj -> {
                         feedbackConsumer.accept(Text.translatable("misc.craftmesh.save"));
                         try (BufferedWriter writer = Files.newBufferedWriter(target.resolve("world.obj"))) {

@@ -125,7 +125,7 @@ public final class MeshVertexConsumer implements VertexConsumer {
             for (int i = 0; i < 4; i++) {
                 vertices[i] = new Vertex(vertCache[i], colorCache[i]);
             }
-            new FaceBuilder(vertices).material(material).groups(activeGroups).build(mesh);
+            new FaceBuilder(vertices).texCoords(texCache).material(material).groups(activeGroups).build(mesh);
             head = 0;
         } else {
             head++;
