@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
@@ -11,6 +12,7 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.igrium.craftmesh.mat.MeshMaterials;
 import com.igrium.craftmesh.mat.TextureExtractor;
 import com.igrium.craftmesh.mesh.BlockMeshBuilder;
 import com.igrium.craftmesh.test.CraftMeshCommand;
@@ -18,6 +20,7 @@ import com.igrium.craftmesh.util.ExecutorServiceManager;
 import com.igrium.meshlib.ConcurrentMeshBuilder;
 import com.mojang.blaze3d.systems.RenderSystem;
 
+import de.javagl.obj.MtlWriter;
 import de.javagl.obj.ObjWriter;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -62,6 +65,7 @@ public class CraftMesh implements ClientModInitializer {
             feedbackConsumer.accept(Text.translatable("misc.craftmesh.world"));
             ConcurrentMeshBuilder mesh = ConcurrentMeshBuilder.create(true);
             mesh.setPrioritizeNewFaces(false);
+            
             futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, true, worldCompileExecutor.getExecutor())
                     .thenApplyAsync(m -> {
                         worldCompileExecutor.close();
@@ -69,6 +73,15 @@ public class CraftMesh implements ClientModInitializer {
                         return mesh.toObj(true);
                     }, Util.getMainWorkerExecutor()).thenAcceptAsync(obj -> {
                         feedbackConsumer.accept(Text.translatable("misc.craftmesh.save"));
+
+                        obj.setMtlFileNames(Collections.singleton("world.mtl"));
+
+                        try(BufferedWriter writer = Files.newBufferedWriter(target.resolve("world.mtl"))) {
+                            MtlWriter.write(MeshMaterials.createMtls("world.png"), writer);
+                        } catch (IOException e) {
+                            throw new CompletionException(e);
+                        }
+
                         try (BufferedWriter writer = Files.newBufferedWriter(target.resolve("world.obj"))) {
                             ObjWriter.write(obj, writer);
                         } catch (IOException e) {

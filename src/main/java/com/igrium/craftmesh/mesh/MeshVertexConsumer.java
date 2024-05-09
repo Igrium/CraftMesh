@@ -60,7 +60,7 @@ public final class MeshVertexConsumer implements VertexConsumer {
 
     private int head = 0;
 
-    private boolean normalEnabled = true;
+    private boolean normalEnabled = false;
 
     public void setNormalEnabled(boolean normalEnabled) {
         this.normalEnabled = normalEnabled;
@@ -125,7 +125,11 @@ public final class MeshVertexConsumer implements VertexConsumer {
             for (int i = 0; i < 4; i++) {
                 vertices[i] = new Vertex(vertCache[i], colorCache[i]);
             }
-            new FaceBuilder(vertices).texCoords(texCache).material(material).groups(activeGroups).build(mesh);
+            FaceBuilder builder = new FaceBuilder(vertices).texCoords(texCache).material(material).groups(activeGroups);
+            if (normalEnabled) {
+                builder.normals(normalCache);
+            }
+            builder.build(mesh);
             head = 0;
         } else {
             head++;
