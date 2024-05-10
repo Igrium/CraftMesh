@@ -12,10 +12,10 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.igrium.craftmesh.command.CraftMeshCommand;
 import com.igrium.craftmesh.mat.MeshMaterials;
 import com.igrium.craftmesh.mat.TextureExtractor;
 import com.igrium.craftmesh.mesh.BlockMeshBuilder;
-import com.igrium.craftmesh.test.CraftMeshCommand;
 import com.igrium.meshlib.ConcurrentMeshBuilder;
 import com.mojang.blaze3d.systems.RenderSystem;
 

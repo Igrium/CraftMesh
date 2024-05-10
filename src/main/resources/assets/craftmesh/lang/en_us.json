@@ -1,4 +1,5 @@
 {
+    "commands.craftmesh.bounds": "Exporting from %s to %s.",
     "commands.craftmesh.error": "Error exporting mesh. See console for details.",
     "commands.craftmesh.success": "Exported mesh in %.2f seconds.",
     "misc.craftmesh.world": "Compiling world...",
