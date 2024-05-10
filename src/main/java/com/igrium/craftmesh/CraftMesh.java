@@ -16,7 +16,6 @@ import com.igrium.craftmesh.mat.MeshMaterials;
 import com.igrium.craftmesh.mat.TextureExtractor;
 import com.igrium.craftmesh.mesh.BlockMeshBuilder;
 import com.igrium.craftmesh.test.CraftMeshCommand;
-import com.igrium.craftmesh.util.ExecutorServiceManager;
 import com.igrium.meshlib.ConcurrentMeshBuilder;
 import com.mojang.blaze3d.systems.RenderSystem;
 
@@ -37,6 +36,8 @@ public class CraftMesh implements ClientModInitializer {
     // That way, it's clear which mod wrote info, warnings, and errors.
     public static final Logger LOGGER = LoggerFactory.getLogger("craftmesh");
 
+    private static final int NUM_THREADS = Math.max(Runtime.getRuntime().availableProcessors() - 2, 1);
+
     @Override
     public void onInitializeClient() {
         ClientCommandRegistrationCallback.EVENT.register(CraftMeshCommand::register);
@@ -45,11 +46,6 @@ public class CraftMesh implements ClientModInitializer {
     public static Path getExportDir(MinecraftClient client) {
         return client.runDirectory.toPath().resolve("craftmesh");
     }
-
-    private static final int AVAILABLE_THREADS = Math.max(1, Runtime.getRuntime().availableProcessors() - 2);
-
-    private static final ExecutorServiceManager<?> WORLD_COMPILE_EXECUTORS = ExecutorServiceManager
-            .createFixed(AVAILABLE_THREADS, r -> new Thread(r, "World Compile Thread"));
 
     public static CompletableFuture<?> export(BlockRenderView world, BlockPos minPos, BlockPos maxPos, String name, Consumer<Text> feedbackConsumer) {
         try {
@@ -60,15 +56,15 @@ public class CraftMesh implements ClientModInitializer {
 
             CompletableFuture<?>[] futures = new CompletableFuture[2];
 
-            var worldCompileExecutor = WORLD_COMPILE_EXECUTORS.getHandle();
+            // var worldCompileExecutor = WORLD_COMPILE_EXECUTORS.getHandle();
 
             feedbackConsumer.accept(Text.translatable("misc.craftmesh.world"));
             ConcurrentMeshBuilder mesh = ConcurrentMeshBuilder.create(true);
             mesh.setPrioritizeNewFaces(false);
             
-            futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, true, worldCompileExecutor.getExecutor())
+            futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, true, Util.getMainWorkerExecutor(), NUM_THREADS)
                     .thenApplyAsync(m -> {
-                        worldCompileExecutor.close();
+                        // worldCompileExecutor.close();
                         feedbackConsumer.accept(Text.translatable("misc.craftmesh.mesh"));
                         return mesh.toObj(true);
                     }, Util.getMainWorkerExecutor()).thenAcceptAsync(obj -> {

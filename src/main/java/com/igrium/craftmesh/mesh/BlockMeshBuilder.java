@@ -7,6 +7,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 import com.igrium.craftmesh.mat.MeshMaterials;
+import com.igrium.craftmesh.util.FutureUtils;
 import com.igrium.meshlib.ConcurrentMeshBuilder;
 
 import net.minecraft.block.BlockRenderType;
@@ -74,22 +75,27 @@ public class BlockMeshBuilder {
 
     public static CompletableFuture<ConcurrentMeshBuilder> buildThreaded(ConcurrentMeshBuilder targetMesh,
             BlockPos minPos, BlockPos maxPos, BlockRenderView world, boolean splitBlocks,
-            Function<BlockState, String> materialFactory, Executor threadExecutor) {
-
+            Function<BlockState, String> materialFactory, Executor threadExecutor, int maxThreads) {
+        
         ChunkSectionPos minChunk = ChunkSectionPos.from(minPos);
         ChunkSectionPos maxChunk = ChunkSectionPos.from(maxPos);
 
         Vec3i size = maxChunk.subtract(minChunk);
-        List<CompletableFuture<?>> futures = new ArrayList<>(size.getX() * size.getY() * size.getZ());
+        
+        List<Runnable> runnables = new ArrayList<>(size.getX() * size.getY() * size.getZ());
 
-        Random random = Random.createLocal();
+        ThreadLocal<Random> randoms = new ThreadLocal<>() {
+            protected Random initialValue() {
+                return Random.createLocal();
+            };
+        };
 
         for (int y = minChunk.getY(); y <= maxChunk.getY(); y++) {
             for (int z = minChunk.getZ(); z <= maxChunk.getZ(); z++) {
                 for (int x = minChunk.getX(); x <= maxChunk.getX(); x++) {
                     ChunkSectionPos chunkPos = ChunkSectionPos.from(x, y, z);
 
-                    futures.add(CompletableFuture.runAsync(() -> {
+                    runnables.add(() -> {
                         int minX = Math.max(minPos.getX(), chunkPos.getMinX());
                         int minY = Math.max(minPos.getY(), chunkPos.getMinY());
                         int minZ = Math.max(minPos.getZ(), chunkPos.getMinZ());
@@ -99,20 +105,52 @@ public class BlockMeshBuilder {
                         int maxZ = Math.min(maxPos.getZ(), chunkPos.getMaxZ());
 
                         build(targetMesh, new BlockPos(minX, minY, minZ),
-                                new BlockPos(maxX, maxY, maxZ), world, splitBlocks, materialFactory, random);
+                                new BlockPos(maxX, maxY, maxZ), world, splitBlocks, materialFactory, randoms.get());
 
-                    }, threadExecutor));
+                    });
                 }
             }
         }
 
-        return CompletableFuture.allOf(futures.toArray(CompletableFuture<?>[]::new)).thenApply(v -> targetMesh);
+        return CompletableFuture.allOf(FutureUtils.runAllAsync(runnables, threadExecutor, maxThreads)).thenApply(v -> targetMesh);
+
+        // ChunkSectionPos minChunk = ChunkSectionPos.from(minPos);
+        // ChunkSectionPos maxChunk = ChunkSectionPos.from(maxPos);
+
+        // Vec3i size = maxChunk.subtract(minChunk);
+        // List<CompletableFuture<?>> futures = new ArrayList<>(size.getX() * size.getY() * size.getZ());
+
+        // Random random = Random.createLocal();
+
+        // for (int y = minChunk.getY(); y <= maxChunk.getY(); y++) {
+        //     for (int z = minChunk.getZ(); z <= maxChunk.getZ(); z++) {
+        //         for (int x = minChunk.getX(); x <= maxChunk.getX(); x++) {
+        //             ChunkSectionPos chunkPos = ChunkSectionPos.from(x, y, z);
+
+        //             futures.add(CompletableFuture.runAsync(() -> {
+        //                 int minX = Math.max(minPos.getX(), chunkPos.getMinX());
+        //                 int minY = Math.max(minPos.getY(), chunkPos.getMinY());
+        //                 int minZ = Math.max(minPos.getZ(), chunkPos.getMinZ());
+
+        //                 int maxX = Math.min(maxPos.getX(), chunkPos.getMaxX());
+        //                 int maxY = Math.min(maxPos.getY(), chunkPos.getMaxY());
+        //                 int maxZ = Math.min(maxPos.getZ(), chunkPos.getMaxZ());
+
+        //                 build(targetMesh, new BlockPos(minX, minY, minZ),
+        //                         new BlockPos(maxX, maxY, maxZ), world, splitBlocks, materialFactory, random);
+
+        //             }, threadExecutor));
+        //         }
+        //     }
+        // }
+
+        // return CompletableFuture.allOf(futures.toArray(CompletableFuture<?>[]::new)).thenApply(v -> targetMesh);
     }
     
     public static CompletableFuture<ConcurrentMeshBuilder> buildThreaded(ConcurrentMeshBuilder targetMesh,
-            BlockPos minPos, BlockPos maxPos, BlockRenderView world, boolean splitBlocks, Executor threadExecutor) {
+            BlockPos minPos, BlockPos maxPos, BlockRenderView world, boolean splitBlocks, Executor threadExecutor, int maxThreads) {
                 
         return buildThreaded(targetMesh, minPos, maxPos, world, splitBlocks,
-                b -> MeshMaterials.getMaterialName(!b.isOpaque(), false), threadExecutor);
+                b -> MeshMaterials.getMaterialName(!b.isOpaque(), false), threadExecutor, maxThreads);
     }
 }
