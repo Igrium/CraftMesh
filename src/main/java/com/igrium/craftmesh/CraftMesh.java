@@ -47,7 +47,7 @@ public class CraftMesh implements ClientModInitializer {
         return client.runDirectory.toPath().resolve("craftmesh");
     }
 
-    public static CompletableFuture<?> export(BlockRenderView world, BlockPos minPos, BlockPos maxPos, String name, Consumer<Text> feedbackConsumer) {
+    public static CompletableFuture<?> export(BlockRenderView world, BlockPos minPos, BlockPos maxPos, BlockPos offset, String name, Consumer<Text> feedbackConsumer) {
         try {
             Path exportDir = getExportDir(MinecraftClient.getInstance());
 
@@ -62,7 +62,7 @@ public class CraftMesh implements ClientModInitializer {
             ConcurrentMeshBuilder mesh = ConcurrentMeshBuilder.create(true);
             mesh.setPrioritizeNewFaces(false);
             
-            futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, world, true, Util.getMainWorkerExecutor(), NUM_THREADS)
+            futures[0] = BlockMeshBuilder.buildThreaded(mesh, minPos, maxPos, offset, world, true, Util.getMainWorkerExecutor(), NUM_THREADS)
                     .thenApplyAsync(m -> {
                         // worldCompileExecutor.close();
                         feedbackConsumer.accept(Text.translatable("misc.craftmesh.mesh"));

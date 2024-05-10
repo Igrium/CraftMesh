@@ -39,7 +39,7 @@ public class CraftMeshCommand {
 
         long startTime = Util.getMeasuringTimeMs();
 
-        CraftMesh.export(context.getSource().getWorld(), minPos, maxPos, name, context.getSource()::sendFeedback)
+        CraftMesh.export(context.getSource().getWorld(), minPos, maxPos, center, name, context.getSource()::sendFeedback)
                 .thenRun(() -> {
                     long time = Util.getMeasuringTimeMs() - startTime;
                     context.getSource().sendFeedback(Text.translatable("commands.craftmesh.success", time / 1000f));
